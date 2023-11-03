@@ -6,15 +6,17 @@ from sqlalchemy import create_engine
 
 
 #Lectura de archivo y creacion de DataFrame
-
-df = pd.read_excel('C:/Users/scottie jimenez/Desktop/ProjecSIE/ICST_EDEESTE_Diciembre_2021.xlsx', header=15)
+ulrArchivo = 'C:/Users/scottie jimenez/Desktop/ProjecSIE/ICST_EDEESTE_Diciembre_2021.xlsx'
+df = pd.read_excel(ulrArchivo, header=15)
 Valores = [col for col in df.columns if col!= 'INDICADOR']
+edeColumn = ulrArchivo[48:55]
 base_pivot = pd.melt(df,id_vars=['INDICADOR'])
 base_pivot = pd.melt(df,id_vars=['INDICADOR'], value_vars = Valores, value_name = 'Valor',var_name="Fecha")
 Filtrado = base_pivot[base_pivot['Valor'] >= 0.000001]
-CreateDataFrame = pd.DataFrame(data=Filtrado)
+new_df = Filtrado.assign(Distribuidora=edeColumn)
+CreateDataFrame = pd.DataFrame(data=new_df)
 
-
+#print(CreateDataFrame)
 #CREACCION Y LECTURA de CSV PERO YA NO SE NECESITA
 
 #CreateDataFrame2 = []
@@ -43,7 +45,7 @@ cursor = conn.cursor()
 #creaccion del query
 
 for index, row in CreateDataFrame.iterrows():
-    SQL_QUERY = f"INSERT INTO Staging.RedGlobalDistribucion (Indicador, Fecha, Valor) VALUES('{row.INDICADOR}', '{row.Fecha}', {row.Valor})"
+    SQL_QUERY = f"INSERT INTO Staging.RedGlobalDistribucion (Indicador, Fecha, Valor, Distribuidora) VALUES('{row.INDICADOR}', '{row.Fecha}', {row.Valor}, '{row.Distribuidora}')"
     cursor.execute(SQL_QUERY)
     conn.commit()
 
