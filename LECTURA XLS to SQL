@@ -1,0 +1,51 @@
+import pandas as pd
+import pyodbc
+from sqlalchemy import create_engine
+
+
+
+
+#Lectura de archivo y creacion de DataFrame
+
+df = pd.read_excel('C:/Users/scottie jimenez/Desktop/ProjecSIE/ICST_EDEESTE_Diciembre_2021.xlsx', header=15)
+Valores = [col for col in df.columns if col!= 'INDICADOR']
+base_pivot = pd.melt(df,id_vars=['INDICADOR'])
+base_pivot = pd.melt(df,id_vars=['INDICADOR'], value_vars = Valores, value_name = 'Valor',var_name="Fecha")
+Filtrado = base_pivot[base_pivot['Valor'] >= 0.000001]
+CreateDataFrame = pd.DataFrame(data=Filtrado)
+
+
+#CREACCION Y LECTURA de CSV PERO YA NO SE NECESITA
+
+#CreateDataFrame2 = []
+#for index, row in CreateDataFrame.iterrows():
+#    prueba = row.INDICADOR, row.Fecha, row.Valor
+#    CreateDataFrame2.append(prueba)
+#
+#nuevadata = pd.DataFrame(data=CreateDataFrame2)
+#nuevadata.to_csv('C:/Users/scottie jimenez/Desktop/ProjecSIE/EDEESTE_Diciembre_2021_nuevo.csv', index=False, sep='|', encoding='utf-8')
+#LecturaCSV = pd.read_csv('C:/Users/scottie jimenez/Desktop/ProjecSIE/EDEESTE_Diciembre_2021_nuevo.csv',delimiter='|')
+
+
+#Coneccion a Base de Datos
+
+SERVER = 'interoperabilidadsie.database.windows.net'
+DATABASE = 'InteroperabilidadSIEMinorsta'
+USERNAME = 'stidatos'
+PASSWORD = 'datossti$@01'
+connectionString = f'DRIVER={{SQL Server}};SERVER={SERVER};DATABASE={DATABASE};UID={USERNAME};PWD={PASSWORD}'
+conn = pyodbc.connect(connectionString) 
+print('Conexion exitosa')
+cursor = conn.cursor()
+
+
+
+#creaccion del query
+
+for index, row in CreateDataFrame.iterrows():
+    SQL_QUERY = f"INSERT INTO Staging.RedGlobalDistribucion (Indicador, Fecha, Valor) VALUES('{row.INDICADOR}', '{row.Fecha}', {row.Valor})"
+    cursor.execute(SQL_QUERY)
+    conn.commit()
+
+
+cursor.close()
