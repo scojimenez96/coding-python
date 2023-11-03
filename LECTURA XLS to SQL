@@ -3,18 +3,28 @@ import pyodbc
 from sqlalchemy import create_engine
 
 
+#VARIABLES DE USO GLOBAL
+
+HOJA1 = 'Red Global de Distribución'
+HOJA2 = 'Circuitos'
+ulrArchivo = 'C:/Users/scottie jimenez/Desktop/ProjecSIE/ICST_EDEESTE_Diciembre_2022.xlsx'
 
 
 #Lectura de archivo y creacion de DataFrame
-ulrArchivo = 'C:/Users/scottie jimenez/Desktop/ProjecSIE/ICST_EDEESTE_Diciembre_2021.xlsx'
-df = pd.read_excel(ulrArchivo, header=15)
-Valores = [col for col in df.columns if col!= 'INDICADOR']
-edeColumn = ulrArchivo.split('_')[1]
-base_pivot = pd.melt(df,id_vars=['INDICADOR'])
-base_pivot = pd.melt(df,id_vars=['INDICADOR'], value_vars = Valores, value_name = 'Valor',var_name="Fecha")
+
+df = pd.read_excel(ulrArchivo, sheet_name=HOJA1, header=15)
+ColumnsIDICADOR = df.columns[0]
+Valores = [col for col in df.columns if col != ColumnsIDICADOR]
+edeColumn = ulrArchivo.split('_')[1] 
+base_pivot = pd.melt(df,id_vars=[ColumnsIDICADOR])
+base_pivot = pd.melt(df,id_vars=[ColumnsIDICADOR], value_vars = Valores, value_name ='Valor',var_name="Fecha")
 Filtrado = base_pivot[base_pivot['Valor'] >= 0.000001]
 new_df = Filtrado.assign(Distribuidora=edeColumn)
 CreateDataFrame = pd.DataFrame(data=new_df)
+
+
+#Quitarle los espacios a las columnas
+CreateDataFrame.columns = CreateDataFrame.columns.str.replace(' ', '')
 
 #print(CreateDataFrame)
 #CREACCION Y LECTURA de CSV PERO YA NO SE NECESITA
