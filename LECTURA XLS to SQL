@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 ulrArchivo = 'C:/Users/scottie jimenez/Desktop/ProjecSIE/ICST_EDEESTE_Diciembre_2021.xlsx'
 df = pd.read_excel(ulrArchivo, header=15)
 Valores = [col for col in df.columns if col!= 'INDICADOR']
-edeColumn = ulrArchivo[48:55]
+edeColumn = ulrArchivo.split('_')[1]
 base_pivot = pd.melt(df,id_vars=['INDICADOR'])
 base_pivot = pd.melt(df,id_vars=['INDICADOR'], value_vars = Valores, value_name = 'Valor',var_name="Fecha")
 Filtrado = base_pivot[base_pivot['Valor'] >= 0.000001]
