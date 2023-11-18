@@ -1,0 +1,73 @@
+import pandas as pd
+import pyodbc
+from sqlalchemy import create_engine
+import re
+
+
+#VARIABLES DE USO GLOBAL
+
+HOJA1 = 'Red Global de Distribución'
+HOJA2 = 'Circuitos'
+ulrArchivo = 'C:/Users/scottie jimenez/Desktop/ProjecSIE/ICST_EDESUR_Junio_2023.xlsx'
+
+
+#Lectura de archivo y creacion de DataFrame
+
+df = pd.read_excel(ulrArchivo, sheet_name=HOJA2, header=8)
+df.rename(columns={'Unnamed: 0': 'Circuito', 'Unnamed: 1': 'Codigo'}, inplace=True)
+
+# Dividir las columnas en pares de 5 después de la segunda columna
+primeras_dos_columnas = df.iloc[:, :2]
+columnas_resto = [df.iloc[:, i:i+5] for i in range(2, len(df.columns), 5)]
+
+#Nuevas columnas para el dataframe
+edeColumn = ulrArchivo.split('_')[1]
+meses_del_anio = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+anio = ulrArchivo.split('_')[-1].split('.')[0]
+
+
+# Obtener el DataFrame concatenado con sus nuevas columnas
+concatenados_list = []
+
+for i, col_pair in enumerate(columnas_resto):
+    
+    mes_actual = meses_del_anio[i % len(meses_del_anio)]
+    
+    df_concatenado = pd.concat([primeras_dos_columnas, col_pair], axis=1, ignore_index=True)
+    agre_mes = df_concatenado.assign(Fecha=f'1/{mes_actual}/{anio}')
+    agre_distribuidora = agre_mes.assign(Distribuidora=edeColumn)
+    
+    concatenados_list.append(agre_distribuidora)
+
+df_final = pd.concat(concatenados_list, axis=0, ignore_index=True)
+
+#Nombrando columnas y limpiando data
+df_final.rename(columns={0: 'Circuito', 1: 'Codigo',2:'SAIFI',3:'SAIDI',4:'CAIDI',5:'ASAI',6:'ASUI'}, inplace=True)
+prefinal_dataframe = df_final.dropna(subset=['Circuito', 'Codigo'])
+final_dataframe = prefinal_dataframe.dropna(subset=['SAIFI','SAIDI','CAIDI','ASAI','ASUI'])
+final_dataframe['Circuito'].fillna(final_dataframe['Codigo'], inplace=True)
+final_dataframe.replace(['-',' '], 0, inplace=True)
+
+#print(final_dataframe)
+#final_dataframe.to_excel('C:/Users/scottie jimenez/Desktop/ProjecSIE/nuevo.xlsx')
+
+#Coneccion a Base de Datos
+
+SERVER = 'interoperabilidadsie.database.windows.net'
+DATABASE = 'InteroperabilidadSIEMinorsta'
+USERNAME = 'stidatos'
+PASSWORD = 'datossti$@01'
+connectionString = f'DRIVER={{SQL Server}};SERVER={SERVER};DATABASE={DATABASE};UID={USERNAME};PWD={PASSWORD}'
+conn = pyodbc.connect(connectionString) 
+print('Conexion exitosa')
+cursor = conn.cursor()
+
+#creaccion del query
+for index, row in final_dataframe.iterrows():
+    SQL_QUERY = f"INSERT INTO Staging.Circuito(Circuito, Codigo, SAIFI,SAIDI,CAIDI,ASAI,ASUI,Fecha, Distribuidora) VALUES('{row.Circuito}', '{row.Codigo}', {row.SAIFI}, {row.SAIDI},{row.CAIDI}, {row.ASAI},{row.ASUI},'{row.Fecha}', '{row.Distribuidora}')"
+    cursor.execute(SQL_QUERY)
+    conn.commit()
+
+
+print('Insert complete')
+cursor.close()
